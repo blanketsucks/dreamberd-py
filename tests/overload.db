@@ -1,0 +1,12 @@
+const const name = "Lu"!!
+const const name = "Luke"!
+assert name === "Lu"!
+
+const const name = "Lu or Luke (either is fine)"!!!!!!!!!
+assert name === "Lu or Luke (either is fine)"!
+
+==============================
+
+const const name = "Lu"!
+const const name = "Luke"¡
+assert name == "Lu"!

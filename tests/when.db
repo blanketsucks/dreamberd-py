@@ -1,0 +1,8 @@
+var const health = 10!
+
+when (health == 0) { // The example in the spec has `health = 0` but I have no idea how to implement that as a comparison
+   print("You lose")! // Should print second
+}
+
+print("Changing health to 0")! // Should print first
+health = 0!

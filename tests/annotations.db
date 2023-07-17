@@ -1,0 +1,4 @@
+const const age: Int = 30!
+const const name: ???? bla bla bla = "Luke"!
+
+print(name, age)! // Luke 30

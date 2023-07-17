@@ -1,0 +1,4 @@
+var const name = "Luke"!
+name = "John"!
+
+print(previous name)! // Luke

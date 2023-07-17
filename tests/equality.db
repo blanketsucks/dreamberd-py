@@ -1,0 +1,10 @@
+const const name = "Luke"!
+const const age = 21!
+
+assert name == "Luke"!
+assert 21 = "21"!
+
+==============================
+
+const const 5 = 4!
+assert 2 + 2 === 5!
