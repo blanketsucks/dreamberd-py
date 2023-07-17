@@ -25,10 +25,7 @@ class Lexer:
             end = self.location
 
         lines = self.source.splitlines()
-        line = lines[start.line - 1]
-
-
-        return Span(start, end, self.filename, line)
+        return Span(start, end, self.filename, lines[start.line - 1])
 
     def next(self) -> None:
         self.index += 1
