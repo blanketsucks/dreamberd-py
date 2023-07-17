@@ -1,4 +1,4 @@
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, List, Optional, Union
 
 from enum import IntEnum
 
@@ -17,6 +17,8 @@ __all__ = (
     'DeleteExpr',
     'IdentifierExpr',
     'VariableExpr',
+    'FunctionExpr',
+    'ReturnExpr',
     'CallExpr',
     'PreviousExpr',
     'AssertExpr',
@@ -138,6 +140,26 @@ class VariableExpr(ASTExpr):
 
     def __repr__(self) -> str:
         return f'<VariableExpr name={self.name!r} value={self.value!r} type={self.type!r}>'
+    
+class FunctionExpr(ASTExpr):
+    def __init__(self, span: Span, name: str, args: List[str], body: Union[List[ASTExpr], ASTExpr]) -> None:
+        super().__init__(span)
+
+        self.name = name
+        self.args = args
+        self.body = body
+
+    def __repr__(self) -> str:
+        return f'<FunctionExpr name={self.name!r} args={self.args!r} body={self.body!r}>'
+    
+class ReturnExpr(ASTExpr):
+    def __init__(self, value: ASTExpr) -> None:
+        super().__init__(value.span)
+
+        self.value = value
+
+    def __repr__(self) -> str:
+        return f'<ReturnExpr value={self.value!r}>'
 
 class CallExpr(ASTExpr):
     def __init__(self, span: Span, callee: ASTExpr, args: List[ASTExpr]) -> None:

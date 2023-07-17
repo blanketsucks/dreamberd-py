@@ -16,11 +16,32 @@ class Argument(NamedTuple):
 
 class Function(NamedTuple):
     name: str
-    args: List[Argument]
+    args: List[str]
     body: List[ASTExpr]
+    is_single_expr: bool
 
     def call(self, args: List[Value[Any]], interpreter: Interpreter) -> Value[Any]:
-        ...
+        from .scope import Scope, Variable, VariableType
+
+        scope = Scope(interpreter, interpreter.scope)
+        interpreter.scope = scope
+
+        with scope:
+            for index, argument in enumerate(self.args):
+                scope.variables[argument] = Variable(
+                    argument, args[index], 0, VariableType.VarVar
+                )
+
+            if self.is_single_expr:
+                scope.return_value = interpreter.visit(self.body[0])
+            else:
+                for expr in self.body:
+                    interpreter.visit(expr)
+
+                    if scope.return_value:
+                        break
+
+        return scope.return_value or Value.undefined()
 
 class BuiltinFunction(NamedTuple):
     name: str

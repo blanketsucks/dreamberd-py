@@ -2,3 +2,11 @@ const const age: Int = 30!
 const const name: ???? bla bla bla = "Luke"!
 
 print(name, age)! // Luke 30
+
+function add(a: Int, b: Int) => a + b!
+
+print(add(1, 2))! // 3
+
+function multiply(a: Something that does not exist, b: Else) => a * b!
+
+print(multiply(2, 3))! // 6

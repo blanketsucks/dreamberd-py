@@ -33,6 +33,7 @@ class TokenType(IntEnum):
     Minus = auto()
     Mul = auto()
     Div = auto()
+    Gt = auto()
 
     Assign = auto()   # = 
     Eq = auto()       # ==
@@ -116,6 +117,7 @@ SINGLE_CHAR_TOKENS = {
     '-': TokenType.Minus,
     '*': TokenType.Mul,
     '/': TokenType.Div,
+    '>': TokenType.Gt,
     '!': TokenType.Not,
     '¡': TokenType.InverseNot,
     '?': TokenType.Question,

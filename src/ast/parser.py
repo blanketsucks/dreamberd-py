@@ -123,6 +123,51 @@ class Parser:
         expr.extras['boldness'] = boldness
         return expr
     
+    def parse_function_definition(self) -> ASTExpr:
+        self.next(True)
+
+        if self.current.type is TokenType.Int:
+            name, span = self.current.value, self.current.span
+            self.next(True)
+        else:
+            token = self.expect(TokenType.Ident, 'identifier', True)
+            name, span = token.value, token.span
+
+        self.expect(TokenType.LParen, '(', True)
+        args = []
+        while self.current.type is not TokenType.RParen:
+            args.append(self.expect(TokenType.Ident, 'identifier', True).value)
+
+            if self.current.type is TokenType.Colon:
+                # Type annotations do nothing so we just ignore them
+                while self.current.type not in (TokenType.Comma, TokenType.RParen):
+                    self.next(True)
+
+            if self.current.type is TokenType.RParen:
+                break
+
+            self.expect(TokenType.Comma, ',', True)
+
+        self.next(True)
+        self.expect(TokenType.Assign, '=', True); self.expect(TokenType.Gt, '>', True)
+
+        if self.current.type is not TokenType.LBrace:
+            return FunctionExpr(span, name, args, self.expr())
+
+        self.expect(TokenType.LBrace, '{', True)
+        body = []
+
+        while self.current.type is not TokenType.RBrace:
+            body.append(self.statement())
+            if self.current.type is TokenType.RBrace:
+                break
+
+            while self.current.type is TokenType.Whitespace:
+                self.next()
+
+        self.next(True)
+        return FunctionExpr(span, name, args, body)
+    
     def statement(self) -> ASTExpr:
         if self.current.type in self.deleted:
             error(self.current.span, f'{self.current.value} has been delete')
@@ -229,6 +274,11 @@ class Parser:
 
             self.next(True)
             return WhenExpr(cond.span, cond, body)
+        elif self.current.type is TokenType.Function:
+            return self.parse_function_definition()
+        elif self.current.type is TokenType.Return:
+            self.next(True)
+            return ReturnExpr(self.expr())
 
         return self.expr()
     

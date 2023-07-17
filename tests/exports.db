@@ -3,7 +3,16 @@
 const const a = 10!
 export a to "main.db"!
 
+function add(a, b) => {
+    return a + b!
+}
+
+export add to "main.db"!
+
 ====== main.db =======
 
 import a!
 print(a)!
+
+import add!
+print(add(1, 2))!

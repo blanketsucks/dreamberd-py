@@ -109,11 +109,28 @@ class Interpreter:
         if variable:
             return Value.with_ref(variable)
         
+        function = self.scope.get_function(expr.name)
+        if function:
+            return Value(function, ValueType.Function)
+        
         if expr.name in ALL_BUILTINS:
             return Value(ALL_BUILTINS[expr.name], ValueType.Function)
 
         # The spec says that `const const name = Luke!` here Luke should be a string
         return Value(expr.name, ValueType.String)
+    
+    def visit_FunctionExpr(self, expr: FunctionExpr) -> Value[Any]:
+        is_single_expr = not isinstance(expr.body, list)
+        body = expr.body if isinstance(expr.body, list) else [expr.body]
+
+        self.scope.functions[expr.name] = Function(expr.name, expr.args, body, is_single_expr)
+        return Value.undefined()
+    
+    def visit_ReturnExpr(self, expr: ReturnExpr) -> Value[Any]:
+        value = self.visit(expr.value)
+        self.scope.set_return_value(value)
+
+        return Value.undefined()
 
     def visit_BinaryOpExpr(self, expr: BinaryOpExpr) -> Value:
         lhs, rhs = self.visit(expr.lhs), self.visit(expr.rhs)
@@ -228,12 +245,14 @@ class Interpreter:
         return Value.undefined()
     
     def visit_ExportExpr(self, expr: ExportExpr) -> Value[Any]:
-        variable = self.scope.get_variable(expr.symbol)
-        if not variable:
-            error(expr.span, 'Cannot export non-existent variable')
+        symbol = self.scope.get_variable(expr.symbol)
+        if not symbol:
+            symbol = self.scope.get_function(expr.symbol)
+            if not symbol:
+                error(expr.span, 'Cannot export non-existent symbol')
 
         exports = self.exports.setdefault(expr.to, {})
-        exports[variable.name] = variable
+        exports[expr.symbol] = symbol
 
         return Value.undefined()
     
@@ -245,8 +264,8 @@ class Interpreter:
         export = exports[expr.symbol]
         if isinstance(export, Variable):
             self.scope.variables[export.name] = export
-        else:
-            raise NotImplementedError
+        elif isinstance(export, Function):
+            self.scope.functions[export.name] = export
         
         return Value.undefined()
 

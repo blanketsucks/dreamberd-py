@@ -5,6 +5,7 @@ from typing import Optional, NamedTuple, TYPE_CHECKING, Dict, Any, List
 from src.ast import ASTExpr, VariableType
 
 if TYPE_CHECKING:
+    from .function import Function
     from .interpreter import Interpreter
     from .value import Value
 
@@ -30,7 +31,9 @@ class Scope:
         self._interpreter = interpreter
 
         self.parent = parent
+
         self.variables: Dict[str, Variable] = {}
+        self.functions: Dict[str, Function] = {}
 
         self.return_value: Optional[Value[Any]] = None
     
@@ -46,9 +49,18 @@ class Scope:
 
         return None
     
-    def __aenter__(self) -> Scope:
+    def get_function(self, name: str) -> Optional[Function]:
+        if name in self.functions:
+            return self.functions[name]
+
+        if self.parent is not None:
+            return self.parent.get_function(name)
+
+        return None
+    
+    def __enter__(self) -> Scope:
         return self
     
-    def __aexit__(self, *args: Any) -> None:
+    def __exit__(self, *args: Any) -> None:
         if self.parent:
             self._interpreter.scope = self.parent
