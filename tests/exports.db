@@ -1,0 +1,9 @@
+========= add.db =======
+
+const const a = 10!
+export a to "main.db"!
+
+====== main.db =======
+
+import a!
+print(a)!

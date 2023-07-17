@@ -25,6 +25,9 @@ class TokenType(IntEnum):
     Return = auto()
     Previous = auto()
     Assert = auto()
+    Export = auto()
+    To = auto()
+    Import = auto()
 
     Plus = auto()
     Minus = auto()
@@ -101,6 +104,9 @@ KEYWORDS = {
     "return": TokenType.Return,
     "previous": TokenType.Previous,
     "assert": TokenType.Assert,
+    "export": TokenType.Export,
+    "to": TokenType.To,
+    "import": TokenType.Import,
 }
 
 KEYWORDS_TO_STR = {v: k for k, v in KEYWORDS.items()}

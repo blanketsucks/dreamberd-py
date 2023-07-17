@@ -5,6 +5,8 @@ from src.tokens import Token, TokenType, KEYWORDS_TO_STR
 from src.errors import error
 from src.lexer import EQ_TYPE_DEPTH
 
+EQ_TYPES = (TokenType.Assign, *EQ_TYPE_DEPTH)
+
 BINARY_OPS = (
     TokenType.Plus, TokenType.Minus, TokenType.Mul, TokenType.Div,
     TokenType.Assign, TokenType.Eq, TokenType.TripleEq, TokenType.QuadEq
@@ -162,7 +164,9 @@ class Parser:
             return AssertExpr(expr, err)
         elif self.current.type is TokenType.QuintEq:
             span = self.current.span
-            self.next(True)
+
+            while self.current.type is not TokenType.Whitespace and self.current.type in EQ_TYPES:
+                self.next(True)
 
             filename: Optional[str] = None
             if self.current.type is TokenType.Ident:
@@ -170,13 +174,38 @@ class Parser:
                 self.next()
 
                 if self.current.type is TokenType.Dot:
-                    self.next(True)
+                    self.next()
                     filename += '.' + self.expect(TokenType.Ident, 'identifier', True).value
 
-            while self.current.type in EQ_TYPE_DEPTH:
+            while self.current.type in EQ_TYPES:
                 self.next(True)
 
             return NewFileExpr(span, filename)
+        elif self.current.type is TokenType.Export:
+            self.next(True)
+
+            token = self.expect(TokenType.Ident, 'identifier', True)
+            symbol, span = token.value, token.span
+
+            self.expect(TokenType.To, 'to', True)
+            filename = self.expect(TokenType.String, 'string', True).value
+
+            boldness = self.expect_boldness()
+            if boldness < 1:
+                error(self.current.span, 'Expected !')
+
+            return ExportExpr(span, symbol, filename)
+        elif self.current.type is TokenType.Import:
+            self.next(True)
+
+            token = self.expect(TokenType.Ident, 'identifier', True)
+            symbol, span = token.value, token.span
+
+            boldness = self.expect_boldness()
+            if boldness < 1:
+                error(self.current.span, 'Expected !')
+
+            return ImportExpr(span, symbol)
         elif self.current.type is TokenType.When:
             self.next(True)
 
@@ -217,6 +246,7 @@ class Parser:
         expr.extras['boldness'] = boldness
         return expr
     
+    # This is probably super buggy but i won't bother testing/fixing it
     def binary(self, lhs: ASTExpr) -> ASTExpr:
         while True:
             is_whitespace_before = self.current.type is TokenType.Whitespace

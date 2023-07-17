@@ -18,7 +18,7 @@ def main() -> None:
     parser = Parser(tokens)
     ast = parser.parse()
 
-    interpreter = Interpreter()
+    interpreter = Interpreter(sys.argv[1])
     for stmt in ast:
         interpreter.visit(stmt)
 

@@ -1,6 +1,6 @@
-from typing import Set, Union, Any, Optional, cast
+from typing import Set, Union, Any, Optional, cast, Dict, List
 
-from src.ast.ast import *
+from src.ast import *
 from src.tokens import TokenType, Span
 from src.errors import error
 
@@ -18,8 +18,12 @@ from .function import Function, ALL_BUILTINS
 INTEGER_TYPES = (ValueType.Int, ValueType.Digit, ValueType.Float)
 
 class Interpreter:
-    def __init__(self) -> None:
+    def __init__(self, filename: str) -> None:
         self.scope = Scope(self)
+        self.filename = filename
+
+        self.files: Dict[str, Scope] = {}
+        self.exports: Dict[str, Dict[str, Any]] = {}
 
         self.deleted_values: Set[Value] = set()
 
@@ -217,8 +221,35 @@ class Interpreter:
     
     def visit_NewFileExpr(self, expr: NewFileExpr) -> Value[Any]:
         self.scope = Scope(self) # TODO: This is how it is for now but it might change
+        if expr.filename:
+            self.filename = expr.filename
+            self.files[expr.filename] = self.scope
+
         return Value.undefined()
     
+    def visit_ExportExpr(self, expr: ExportExpr) -> Value[Any]:
+        variable = self.scope.get_variable(expr.symbol)
+        if not variable:
+            error(expr.span, 'Cannot export non-existent variable')
+
+        exports = self.exports.setdefault(expr.to, {})
+        exports[variable.name] = variable
+
+        return Value.undefined()
+    
+    def visit_ImportExpr(self, expr: ImportExpr) -> Value[Any]:
+        exports = self.exports.get(self.filename, {})
+        if expr.symbol not in exports:
+            error(expr.span, 'Cannot import non-existent symbol')
+
+        export = exports[expr.symbol]
+        if isinstance(export, Variable):
+            self.scope.variables[export.name] = export
+        else:
+            raise NotImplementedError
+        
+        return Value.undefined()
+
     def visit_WhenExpr(self, expr: WhenExpr) -> Value[Any]:
         cond = cast(BinaryOpExpr, expr.condition)
         if not isinstance(cond.lhs, IdentifierExpr):

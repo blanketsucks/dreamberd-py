@@ -22,6 +22,8 @@ __all__ = (
     'AssertExpr',
     'NewFileExpr',
     'WhenExpr',
+    'ExportExpr',
+    'ImportExpr',
 )
 
 
@@ -174,6 +176,25 @@ class NewFileExpr(ASTExpr):
 
     def __repr__(self) -> str:
         return f'<NewFileExpr filename={self.filename!r}>'
+    
+class ExportExpr(ASTExpr):
+    def __init__(self, span: Span, symbol: str, to: str) -> None:
+        super().__init__(span)
+
+        self.symbol = symbol
+        self.to = to
+
+    def __repr__(self) -> str:
+        return f'<ExportExpr symbol={self.symbol!r} to={self.to!r}>'
+    
+class ImportExpr(ASTExpr):
+    def __init__(self, span: Span, symbol: str) -> None:
+        super().__init__(span)
+
+        self.symbol = symbol
+
+    def __repr__(self) -> str:
+        return f'<ImportExpr symbol={self.symbol!r}>'
     
 class WhenExpr(ASTExpr):
     def __init__(self, span: Span, condition: ASTExpr, body: List[ASTExpr]) -> None:
