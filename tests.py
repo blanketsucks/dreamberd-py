@@ -1,5 +1,3 @@
-# Small script to test if the examples still compile after compiler changes
-
 from __future__ import annotations
 
 from typing import Iterable, List, Any, Tuple, Union, TypedDict
@@ -62,7 +60,7 @@ class Test:
 
         if stderr != result['stderr']:
             print(f'- {Colors.Red}Test {self.file} failed.{Colors.Red}')
-            
+
             print('    Expected stderr:'); print(result['stderr'])
             print('    Actual stderr:'); print(stderr)
 
