@@ -7,6 +7,6 @@ function add(a: Int, b: Int) => a + b!
 
 print(add(1, 2))! // 3
 
-function multiply(a: Something that does not exist, b: Else) => a * b!
+functi multiply(a: Something that does not exist, b: Else) => a * b!
 
 print(multiply(2, 3))! // 6
