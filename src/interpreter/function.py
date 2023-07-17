@@ -19,9 +19,16 @@ class Function(NamedTuple):
     args: List[str]
     body: List[ASTExpr]
     is_single_expr: bool
+    is_async: bool
 
-    def call(self, args: List[Value[Any]], interpreter: Interpreter) -> Value[Any]:
+    def call(self, args: List[Value[Any]], interpreter: Interpreter, await_result: bool = False) -> Value[Any]:
         from .scope import Scope, Variable, VariableType
+
+        if self.is_async and not await_result:
+            interpreter.pending = self.body.copy()
+            interpreter.skip_current_newline = True
+
+            return Value.undefined()
 
         scope = Scope(interpreter, interpreter.scope)
         interpreter.scope = scope
@@ -47,8 +54,9 @@ class BuiltinFunction(NamedTuple):
     name: str
     args: List[Argument]
     callable: Callable[[List[Value[Any]], Interpreter], Value[Any]]
+    is_async: bool = False
 
-    def call(self, args: List[Value[Any]], interpreter: Interpreter) -> Value:
+    def call(self, args: List[Value[Any]], interpreter: Interpreter, await_result: bool = False) -> Value:
         return self.callable(args, interpreter)
     
 def register(name: str):

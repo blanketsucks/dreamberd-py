@@ -28,6 +28,8 @@ __all__ = (
     'ExportExpr',
     'ImportExpr',
     'ReverseExpr',
+    'NewlineExpr',
+    'AwaitExpr',
 )
 
 
@@ -153,15 +155,18 @@ class VariableExpr(ASTExpr):
         return f'<VariableExpr name={self.name!r} value={self.value!r} type={self.type!r}>'
     
 class FunctionExpr(ASTExpr):
-    def __init__(self, span: Span, name: str, args: List[str], body: Union[List[ASTExpr], ASTExpr]) -> None:
+    def __init__(
+        self, span: Span, name: str, args: List[str], body: Union[List[ASTExpr], ASTExpr], is_async: bool = False
+    ) -> None:
         super().__init__(span)
 
         self.name = name
         self.args = args
         self.body = body
+        self.is_async = is_async
 
     def __repr__(self) -> str:
-        return f'<FunctionExpr name={self.name!r} args={self.args!r} body={self.body!r}>'
+        return f'<FunctionExpr name={self.name!r} args={self.args!r} is_async={self.is_async}>'
     
 class ReturnExpr(ASTExpr):
     def __init__(self, value: ASTExpr) -> None:
@@ -242,3 +247,16 @@ class WhenExpr(ASTExpr):
 class ReverseExpr(ASTExpr):
     def __repr__(self) -> str:
         return f'<ReverseExpr>'
+    
+class NewlineExpr(ASTExpr):
+    def __repr__(self) -> str:
+        return f'<NewlineExpr>'
+    
+class AwaitExpr(ASTExpr):
+    def __init__(self, expr: ASTExpr) -> None:
+        super().__init__(expr.span)
+
+        self.expr = expr
+
+    def __repr__(self) -> str:
+        return f'<AwaitExpr expr={self.expr!r}>'

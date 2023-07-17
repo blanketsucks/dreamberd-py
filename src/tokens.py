@@ -93,6 +93,7 @@ class Token(NamedTuple):
 KEYWORDS = {
     "function": TokenType.Function,
     "func": TokenType.Function,
+    "funct": TokenType.Function,
     "fun": TokenType.Function,
     "fn": TokenType.Function,
     "functi": TokenType.Function,

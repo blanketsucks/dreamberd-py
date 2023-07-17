@@ -74,10 +74,8 @@ class Parser:
                 continue
 
             stmts.append(self.statement())
-
-            is_next_eof = self.peek().type is TokenType.EOF
-            if self.current.type is not TokenType.Whitespace and self.current.value != '\n' and not is_next_eof:
-                error(self.current.span, 'Expected newline')
+            if self.current.type is TokenType.Whitespace and self.current.value == '\n':
+                stmts.append(NewlineExpr(self.current.span))
 
             while self.current.type is TokenType.Whitespace:
                 self.next()
@@ -134,7 +132,7 @@ class Parser:
         expr.extras['boldness'] = boldness
         return expr
     
-    def parse_function_definition(self) -> ASTExpr:
+    def parse_function_definition(self, is_async: bool) -> ASTExpr:
         self.next(True)
 
         if self.current.type is TokenType.Int:
@@ -177,8 +175,8 @@ class Parser:
             while self.current.type is TokenType.Whitespace:
                 self.next()
 
-        self.next(True)
-        return FunctionExpr(span, name, args, body)
+        self.next()
+        return FunctionExpr(span, name, args, body, is_async)
     
     def statement(self) -> ASTExpr:
         if self.current.type in self.deleted:
@@ -287,7 +285,7 @@ class Parser:
             self.next(True)
             return WhenExpr(cond.span, cond, body)
         elif self.current.type is TokenType.Function:
-            return self.parse_function_definition()
+            return self.parse_function_definition(False)
         elif self.current.type is TokenType.Return:
             self.next(True)
             return ReturnExpr(self.expr())
@@ -300,6 +298,15 @@ class Parser:
                 error(self.current.span, 'Expected !')
 
             return ReverseExpr(span)
+        elif self.current.type is TokenType.Async:
+            self.next(True)
+            if self.current.type is not TokenType.Function:
+                error(self.current.span, 'Expected function')
+
+            return self.parse_function_definition(True)
+        elif self.current.type is TokenType.Await:
+            self.next(True)
+            return AwaitExpr(self.expr())
 
         return self.expr()
     

@@ -30,6 +30,9 @@ class Interpreter:
 
         self.deleted_values: Set[Value] = set()
 
+        self.pending: List[ASTExpr] = []
+        self.skip_current_newline = False
+
     def is_deleted_value(self, value: Value) -> bool:
         for val in self.deleted_values:
             if val.value == value.value and val.type == value.type:
@@ -70,8 +73,18 @@ class Interpreter:
         return result
 
     def visit(self, expr: ASTExpr) -> Value[Any]:
-        # A bit cursed but whatever
-        method = getattr(self, f'visit_{expr.__class__.__name__}') 
+        # There is probably some bug lurking here
+        if isinstance(expr, NewlineExpr):
+            if self.skip_current_newline:
+                self.skip_current_newline = False
+                return Value.undefined()
+
+            if self.pending:
+                self.visit(self.pending.pop(0))
+
+            return Value.undefined()
+
+        method = getattr(self, f'visit_{expr.__class__.__name__}')
         return self.validate(expr.span, method(expr))
     
     def visit_ReverseExpr(self, expr: ReverseExpr) -> Value[Any]:
@@ -80,7 +93,7 @@ class Interpreter:
 
         ast.reverse()
 
-        # TODO: Construct new intepreter or make new scope???
+        # TODO: Construct new interpreter or make new scope???
         for stmt in ast:
             self.visit(stmt)
 
@@ -183,7 +196,7 @@ class Interpreter:
         is_single_expr = not isinstance(expr.body, list)
         body = expr.body if isinstance(expr.body, list) else [expr.body]
 
-        self.scope.functions[expr.name] = Function(expr.name, expr.args, body, is_single_expr)
+        self.scope.functions[expr.name] = Function(expr.name, expr.args, body, is_single_expr, expr.is_async)
         return Value.undefined()
     
     def visit_ReturnExpr(self, expr: ReturnExpr) -> Value[Any]:
@@ -338,3 +351,18 @@ class Interpreter:
 
         variable.when_mutated = WhenMutated(cond, expr.body)
         return Value.undefined()
+
+    def visit_AwaitExpr(self, expr: AwaitExpr) -> Value[Any]:
+        if not isinstance(expr.expr, CallExpr):
+            error(expr.span, 'Can only await function calls')
+
+        call = cast(CallExpr, expr.expr)
+        callee = self.visit(call.callee)
+
+        if callee.type is not ValueType.Function:
+            error(call.callee.span, 'Can only await function calls')
+
+        if not callee.value.is_async:
+            error(call.callee.span, 'Can only await async functions')
+
+        return callee.value.call([self.visit(arg) for arg in call.args], self, await_result=True)
