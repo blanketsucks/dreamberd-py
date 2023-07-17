@@ -4,7 +4,7 @@ from src.ast import *
 from src.tokens import TokenType, Span
 from src.errors import error
 
-from .value import Bool, Value, ValueType, Array
+from .value import SPECIAL_VALUES, Bool, Dictionary, Value, ValueType, Array
 from .scope import Scope, Variable, WhenMutated
 from .function import Function, ALL_BUILTINS
 
@@ -58,28 +58,44 @@ class Interpreter:
     def visit_ArrayExpr(self, expr: ArrayExpr) -> Value[Array]:
         return Value(Array([self.visit(value) for value in expr.values]), ValueType.Array)
     
-    def visit_ArrayIndexExpr(self, expr: ArrayIndexExpr) -> Value[Any]:
-        array: Value[Union[Array, int, str]] = self.visit(expr.array)
+    def visit_DictExpr(self, expr: DictExpr) -> Value[Dictionary]:
+        values = [
+            (self.visit(key), self.visit(value)) for key, value in expr.values
+        ]
+
+        for key, _ in values:
+            if key.type not in (ValueType.Int, ValueType.Digit, ValueType.String):
+                # This is a python limitation as any other type is not hashable and cannot be put into a dictionary
+                error(expr.span, 'Dictionary key must be an integer, digit or string')
+
+        return Value(Dictionary(values), ValueType.Dict)
+    
+    def visit_IndexExpr(self, expr: IndexExpr) -> Value[Any]:
+        value: Value[Union[Array, Dictionary, int, str]] = self.visit(expr.value)
         index: Value[Union[int, float]] = self.visit(expr.index)
 
         # Because Int == Digit[], `123[0]` should be possible
-        if array.type not in (ValueType.Array, ValueType.String, ValueType.Int):
-            error(expr.array.span, 'Cannot index non-array value')
+        if value.type not in (ValueType.Array, ValueType.String, ValueType.Int, ValueType.Dict):
+            error(expr.value.span, 'Cannot index value')
+
+        if isinstance(value.value, Dictionary):
+            return value.value.at(index)
 
         if index.type not in (ValueType.Int, ValueType.Digit, ValueType.Float):
             error(expr.index.span, 'Cannot index with non-integer value')
 
-        if isinstance(array.value, int):
-            array.value = Array.from_int(array.value)
-        elif isinstance(array.value, str):
-            array.value = Array.from_str(array.value)
+        arr: Value[Union[Array, int, str]] = value # type: ignore
+        if isinstance(arr.value, int):
+            arr.value = Array.from_int(arr.value)
+        elif isinstance(arr.value, str):
+            arr.value = Array.from_str(arr.value)
 
         idx = index.value
-        if idx < -len(array.value) or idx >= len(array.value):
+        if idx < -len(arr.value) or idx >= len(arr.value):
             error(expr.index.span, f'Array index out of bounds')
 
-        return array.value.at(idx)
-    
+        return arr.value.at(idx)
+        
     def visit_CallExpr(self, expr: CallExpr) -> Value[Any]:
         callee: Value[Function] = self.visit(expr.callee)
         if callee.type is not ValueType.Function:
@@ -115,6 +131,9 @@ class Interpreter:
         
         if expr.name in ALL_BUILTINS:
             return Value(ALL_BUILTINS[expr.name], ValueType.Function)
+        
+        if expr.name in SPECIAL_VALUES:
+            return SPECIAL_VALUES[expr.name]
 
         # The spec says that `const const name = Luke!` here Luke should be a string
         return Value(expr.name, ValueType.String)
@@ -133,8 +152,27 @@ class Interpreter:
         return Value.undefined()
 
     def visit_BinaryOpExpr(self, expr: BinaryOpExpr) -> Value:
-        lhs, rhs = self.visit(expr.lhs), self.visit(expr.rhs)
+        if isinstance(expr.lhs, IndexExpr) and expr.op is TokenType.Assign:
+            index = self.visit(expr.lhs.index)
+            parent = self.visit(expr.lhs.value)
 
+            if parent.type not in (ValueType.Array, ValueType.Dict):
+                error(expr.lhs.value.span, 'Cannot index value')
+
+            if isinstance(parent.value, Dictionary):
+                if index.type not in (ValueType.Int, ValueType.Digit, ValueType.String):
+                    error(expr.lhs.index.span, 'Dictionary key must be an integer, digit or string')
+
+                parent.value.insert(index, self.visit(expr.rhs))
+                return Value.undefined()
+
+            if index.type not in (ValueType.Int, ValueType.Digit, ValueType.Float):
+                error(expr.lhs.index.span, 'Array index must be an integer, digit or float')
+
+            parent.value.insert(index.value, self.visit(expr.rhs))
+            return Value.undefined()    
+        
+        lhs, rhs = self.visit(expr.lhs), self.visit(expr.rhs)
         if lhs.ref and expr.op is TokenType.Assign:
             if lhs.ref.type in (VariableType.ConstConst, VariableType.ConstConstConst, VariableType.ConstVar):
                 error(expr.lhs.span, 'Cannot assign to const variable')

@@ -8,3 +8,9 @@ assert 21 = "21"!
 
 const const 5 = 4!
 assert 2 + 2 === 5!
+
+==============================
+
+const const true = false!
+
+assert true === false!

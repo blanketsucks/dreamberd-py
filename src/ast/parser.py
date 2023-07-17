@@ -157,6 +157,7 @@ class Parser:
         self.expect(TokenType.LBrace, '{', True)
         body = []
 
+        # TODO: Enforce 3 or -3 indent
         while self.current.type is not TokenType.RBrace:
             body.append(self.statement())
             if self.current.type is TokenType.RBrace:
@@ -366,6 +367,25 @@ class Parser:
 
             self.next(True)
             expr = ArrayExpr(span, elements)
+        elif self.current.type is TokenType.LBrace:
+            self.next(True)
+
+            elements = []
+            while self.current.type is not TokenType.RBrace:
+                key = self.expr(False)
+
+                self.expect(TokenType.Colon, ':', True)
+                value = self.expr(False)
+
+                elements.append((key, value))
+
+                if self.current.type is TokenType.RBrace:
+                    break
+
+                self.expect(TokenType.Comma, ',', True)
+
+            self.next(True)
+            expr = DictExpr(span, elements)
         elif self.current.type is TokenType.LParen:
             self.next(True)
             expr = self.expr(False)
@@ -396,7 +416,7 @@ class Parser:
             index = self.expr(False)
             self.expect(TokenType.RBracket, ']', True)
 
-            expr = ArrayIndexExpr(expr.span, expr, index)
+            expr = IndexExpr(expr.span, expr, index)
 
         return expr
         

@@ -57,36 +57,47 @@ def register(name: str):
         return func
     return decorator
 
-def _print_single(value: Value[Any]) -> int:
+def format_value(value: Value[Any]) -> Any:
     if value.type is ValueType.Array:
-        fmt = '[{}]'
-        return sys.stdout.write(fmt.format(', '.join([f'{element.value!r}' for element in value.value])))
+        fmt = '['
+        for elem in value.value:
+            is_last = elem is value.value[-1]
+            
+            fmt += format_value(elem)
+            if not is_last:
+                fmt += ', '
+
+        fmt += ']'
+    elif value.type is ValueType.Dict:
+        fmt = '{'
+        for i, (key, val) in enumerate(value.value.items()):
+            is_last = i == len(value.value) - 1
+            fmt += f'{key!r}: {format_value(val)!r}'
+
+            if not is_last:
+                fmt += ', '
+
+        fmt += '}'
     elif value.type is ValueType.Undefined:
-        return sys.stdout.write('undefined')
+        fmt = 'undefined'
     elif value.type is ValueType.Null:
-        return sys.stdout.write('null')
+        fmt = 'null'
     elif value.type is ValueType.Bool:
         if value.value is Bool.true:
-            return sys.stdout.write('true')
+            fmt = 'true'
         elif value.value is Bool.false:
-            return sys.stdout.write('false')
+            fmt = 'false'
+        else:
+            fmt = 'maybe'
+    else:
+        fmt = value.value
 
-        return sys.stdout.write('maybe')
-    elif value.type is ValueType.Int:
-        if isinstance(value.value, Array):
-            return sys.stdout.write(str(value.value.to_int()))
-
-        return sys.stdout.write(str(value.value))
-    elif value.type is ValueType.String:
-        return sys.stdout.write(value.value)
-
-    return sys.stdout.write(str(value.value))
+    return fmt
 
 @register('print')
-def _print(args: List[Value], interpreter: Interpreter) -> Value:
+def _print(args: List[Value], _: Interpreter) -> Value:
     for argument in args:
-        _print_single(argument)
-
+        sys.stdout.write(str(format_value(argument)))
         sys.stdout.write(' ')
         
     sys.stdout.write('\n')

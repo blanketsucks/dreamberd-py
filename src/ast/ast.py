@@ -1,4 +1,4 @@
-from typing import Dict, Any, List, Optional, Union
+from typing import Dict, Any, List, Optional, Tuple, Union
 
 from enum import IntEnum
 
@@ -11,7 +11,8 @@ __all__ = (
     'FloatExpr',
     'StringExpr',
     'ArrayExpr',
-    'ArrayIndexExpr',
+    'DictExpr',
+    'IndexExpr',
     'BinaryOpExpr',
     'UnaryOpExpr',
     'DeleteExpr',
@@ -80,16 +81,25 @@ class ArrayExpr(ASTExpr):
 
     def __repr__(self) -> str:
         return f'<ArrayExpr values={self.values!r}>'
-
-class ArrayIndexExpr(ASTExpr):
-    def __init__(self, span: Span, array: ASTExpr, index: ASTExpr) -> None:
+    
+class DictExpr(ASTExpr):
+    def __init__(self, span: Span, values: List[Tuple[ASTExpr, ASTExpr]]) -> None:
         super().__init__(span)
 
-        self.array = array
+        self.values = values
+
+    def __repr__(self) -> str:
+        return f'<DictExpr values={self.values!r}>'
+
+class IndexExpr(ASTExpr):
+    def __init__(self, span: Span, value: ASTExpr, index: ASTExpr) -> None:
+        super().__init__(span)
+
+        self.value = value
         self.index = index
 
     def __repr__(self) -> str:
-        return f'<ArrayIndexExpr array={self.array!r} index={self.index!r}>'
+        return f'<IndexExpr value={self.value!r} index={self.index!r}>'
 
 class BinaryOpExpr(ASTExpr):
     def __init__(self, lhs: ASTExpr, rhs: ASTExpr, op: TokenType) -> None:

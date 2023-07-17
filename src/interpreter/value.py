@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, List, Dict, Optional, TypeVar, Generic, TYPE_CHECKING
+from typing import Any, List, Dict, Optional, Tuple, TypeVar, Generic, TYPE_CHECKING
 from enum import IntEnum, auto
 
 if TYPE_CHECKING:
@@ -152,3 +152,44 @@ class Array:
             return ''
 
         return ''.join(str(value.value) for value in self.to_list())
+
+class Dictionary:
+    def __init__(self, values: List[Tuple[Value, Value]]) -> None:
+        self.values: Dict[Any, Value[Any]] = {key.value: value for key, value in values}
+
+    def __repr__(self) -> str:
+        return f'<Dictionary length={self.length}>'
+    
+    def __len__(self) -> int:
+        return self.length
+    
+    def __eq__(self, other: Any) -> bool:
+        if not isinstance(other, Dictionary):
+            return False
+        
+        return self.values == other.values
+    
+    @property
+    def length(self) -> int:
+        return len(self.values)
+    
+    def at(self, key: Value[Any]) -> Value[Any]:
+        value = self.values.get(key.value)
+        if not value:
+            return Value.undefined()
+        
+        return value
+    
+    def insert(self, key: Value[Any], value: Value[Any]) -> None:
+        self.values[key.value] = value
+
+    def items(self):
+        return self.values.items()
+
+SPECIAL_VALUES = {
+    "true": Value.true(),
+    "false": Value.false(),
+    "maybe": Value.maybe(),
+    "null": Value.null(),
+    "undefined": Value.undefined()
+}
