@@ -27,6 +27,7 @@ __all__ = (
     'WhenExpr',
     'ExportExpr',
     'ImportExpr',
+    'ReverseExpr',
 )
 
 
@@ -237,3 +238,7 @@ class WhenExpr(ASTExpr):
 
     def __repr__(self) -> str:
         return f'<WhenExpr condition={self.condition!r} body={self.body!r}>'
+    
+class ReverseExpr(ASTExpr):
+    def __repr__(self) -> str:
+        return f'<ReverseExpr>'

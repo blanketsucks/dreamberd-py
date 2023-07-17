@@ -19,7 +19,9 @@ from .function import Function, ALL_BUILTINS
 INTEGER_TYPES = (ValueType.Int, ValueType.Digit, ValueType.Float)
 
 class Interpreter:
-    def __init__(self, filename: str) -> None:
+    def __init__(self, filename: str, ast: List[ASTExpr]) -> None:
+        self.ast = ast
+
         self.scope = Scope(self)
         self.filename = filename
 
@@ -71,6 +73,18 @@ class Interpreter:
         # A bit cursed but whatever
         method = getattr(self, f'visit_{expr.__class__.__name__}') 
         return self.validate(expr.span, method(expr))
+    
+    def visit_ReverseExpr(self, expr: ReverseExpr) -> Value[Any]:
+        ast = self.ast.copy()
+        ast.remove(expr)
+
+        ast.reverse()
+
+        # TODO: Construct new intepreter or make new scope???
+        for stmt in ast:
+            self.visit(stmt)
+
+        return Value.undefined()
 
     def visit_IntegerExpr(self, expr: IntegerExpr) -> Value[int]:
         if str(expr.value) in self.scope.variables:

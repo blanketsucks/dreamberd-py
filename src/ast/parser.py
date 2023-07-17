@@ -75,6 +75,10 @@ class Parser:
 
             stmts.append(self.statement())
 
+            is_next_eof = self.peek().type is TokenType.EOF
+            if self.current.type is not TokenType.Whitespace and self.current.value != '\n' and not is_next_eof:
+                error(self.current.span, 'Expected newline')
+
             while self.current.type is TokenType.Whitespace:
                 self.next()
 
@@ -287,6 +291,15 @@ class Parser:
         elif self.current.type is TokenType.Return:
             self.next(True)
             return ReturnExpr(self.expr())
+        elif self.current.type is TokenType.Reverse:
+            span = self.current.span
+            self.next(True)
+
+            boldness = self.expect_boldness()
+            if boldness < 1:
+                error(self.current.span, 'Expected !')
+
+            return ReverseExpr(span)
 
         return self.expr()
     

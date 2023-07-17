@@ -16,7 +16,6 @@ class TokenType(IntEnum):
     When = auto()
     If = auto()
     Class = auto()
-    ClassName = auto()
     New = auto()
     Delete = auto()
     Async = auto()
@@ -28,6 +27,7 @@ class TokenType(IntEnum):
     Export = auto()
     To = auto()
     Import = auto()
+    Reverse = auto()
 
     Plus = auto()
     Minus = auto()
@@ -102,7 +102,7 @@ KEYWORDS = {
     "when": TokenType.When,
     "if": TokenType.If,
     "class": TokenType.Class,
-    "className": TokenType.ClassName,
+    "className": TokenType.Class,
     "new": TokenType.New,
     "delete": TokenType.Delete,
     "async": TokenType.Async,
@@ -114,6 +114,7 @@ KEYWORDS = {
     "export": TokenType.Export,
     "to": TokenType.To,
     "import": TokenType.Import,
+    "reverse": TokenType.Reverse,
 }
 
 KEYWORDS_TO_STR = {v: k for k, v in KEYWORDS.items()}
