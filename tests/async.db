@@ -9,4 +9,21 @@ print(1)!
 print(3)!
 print(5)!
 
+print("===========")!
+
 await count()!
+
+================== 
+
+print("===========")!
+
+async functi count() => {
+   print(2)!
+   noop!
+   print(5)!
+}
+
+count()!
+print(1)!
+print(3)!
+print(4)!

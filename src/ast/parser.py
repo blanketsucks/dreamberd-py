@@ -220,8 +220,8 @@ class Parser:
         elif self.current.type is TokenType.QuintEq:
             span = self.current.span
 
-            while self.current.type is not TokenType.Whitespace and self.current.type in EQ_TYPES:
-                self.next(True)
+            while  self.current.type in EQ_TYPES:
+                self.next()
 
             filename: Optional[str] = None
             if self.current.type is TokenType.Ident:
@@ -307,6 +307,15 @@ class Parser:
         elif self.current.type is TokenType.Await:
             self.next(True)
             return AwaitExpr(self.expr())
+        elif self.current.type is TokenType.Noop:
+            span = self.current.span
+            self.next(True)
+
+            boldness = self.expect_boldness()
+            if boldness < 1:
+                error(self.current.span, 'Expected !')
+
+            return StringExpr(span, 'noop')
 
         return self.expr()
     

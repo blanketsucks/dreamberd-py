@@ -33,6 +33,11 @@ class Interpreter:
         self.pending: List[ASTExpr] = []
         self.skip_current_newline = False
 
+    def finalize(self) -> None:
+        # Evaluates any pending expressions
+        while self.pending:
+            self.visit(self.pending.pop(0))
+
     def is_deleted_value(self, value: Value) -> bool:
         for val in self.deleted_values:
             if val.value == value.value and val.type == value.type:
@@ -80,7 +85,11 @@ class Interpreter:
                 return Value.undefined()
 
             if self.pending:
-                self.visit(self.pending.pop(0))
+                pending = self.pending.pop(0)
+                if isinstance(pending, StringExpr):
+                    return Value.undefined()
+
+                self.visit(pending)
 
             return Value.undefined()
 
@@ -308,7 +317,9 @@ class Interpreter:
         return Value.undefined()
     
     def visit_NewFileExpr(self, expr: NewFileExpr) -> Value[Any]:
+        self.finalize()
         self.scope = Scope(self) # TODO: This is how it is for now but it might change
+
         if expr.filename:
             self.filename = expr.filename
             self.files[expr.filename] = self.scope

@@ -22,5 +22,7 @@ def main() -> None:
     for stmt in ast:
         interpreter.visit(stmt)
 
+    interpreter.finalize()
+
 if __name__ == '__main__':
     main()
