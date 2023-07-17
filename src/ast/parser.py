@@ -6,10 +6,17 @@ from src.errors import error
 from src.lexer import EQ_TYPE_DEPTH
 
 EQ_TYPES = (TokenType.Assign, *EQ_TYPE_DEPTH)
+NEQ_TYPES_TO_EQ = {
+    TokenType.NAssign: TokenType.Assign,
+    TokenType.NEq: TokenType.Eq,
+    TokenType.NTripleEq: TokenType.TripleEq,
+    TokenType.NQuadEq: TokenType.QuadEq,
+}
 
 BINARY_OPS = (
     TokenType.Plus, TokenType.Minus, TokenType.Mul, TokenType.Div,
-    TokenType.Assign, TokenType.Eq, TokenType.TripleEq, TokenType.QuadEq
+    TokenType.Assign, TokenType.Eq, TokenType.TripleEq, TokenType.QuadEq,
+    TokenType.NAssign, TokenType.NEq, TokenType.NTripleEq, TokenType.NQuadEq,
 )
 
 UNARY_OPS = (

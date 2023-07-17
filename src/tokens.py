@@ -41,6 +41,12 @@ class TokenType(IntEnum):
     QuadEq = auto()   # ====
     QuintEq = auto()  # =====
 
+    NAssign = auto()   # ;=
+    NEq = auto()       # ;==
+    NTripleEq = auto() # ;===
+    NQuadEq = auto()   # ;====
+
+
     Not = auto()
     InverseNot = auto()
     Question = auto() # no idea what and how to name this
@@ -121,7 +127,6 @@ SINGLE_CHAR_TOKENS = {
     '!': TokenType.Not,
     '¡': TokenType.InverseNot,
     '?': TokenType.Question,
-    ';': TokenType.SemiColon,
     ':': TokenType.Colon,
     ',': TokenType.Comma,
     '.': TokenType.Dot,

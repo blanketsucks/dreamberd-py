@@ -3,6 +3,7 @@ from typing import Optional
 from .tokens import Token, TokenType, KEYWORDS, SINGLE_CHAR_TOKENS, Location, Span
 
 EQ_TYPE_DEPTH = [TokenType.Eq, TokenType.TripleEq, TokenType.QuadEq, TokenType.QuintEq]
+NEQ_TYPE_DEPTH = [TokenType.NEq, TokenType.NTripleEq, TokenType.NQuadEq]
 
 class Lexer:
     def __init__(self, source: str, filename: str) -> None:
@@ -138,6 +139,19 @@ class Lexer:
                 
                 self.next()
                 return Token(TokenType.Assign, '=', self.make_span(start))
+            elif self.current_char == ';':
+                if self.peek() == '=':
+                    self.next()
+
+                    depth = 0
+                    while self.current_char == '=' and depth < 3:
+                        self.next()
+                        depth += 1
+
+                    return Token(NEQ_TYPE_DEPTH[depth - 1], ';=' + '=' * depth, self.make_span(start))
+                
+                self.next()
+                return Token(TokenType.SemiColon, ';', self.make_span(start))
             else:
                 raise Exception(f'Unexpected character {self.current_char!r}')
             

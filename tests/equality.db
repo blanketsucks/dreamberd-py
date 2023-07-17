@@ -3,6 +3,7 @@ const const age = 21!
 
 assert name == "Luke"!
 assert 21 = "21"!
+assert 21 ;== "21"!
 
 ==============================
 

@@ -3,6 +3,7 @@ from typing import Set, Union, Any, Optional, cast, Dict, List
 from src.ast import *
 from src.tokens import TokenType, Span
 from src.errors import error
+from src.ast.parser import EQ_TYPES, NEQ_TYPES_TO_EQ
 
 from .value import SPECIAL_VALUES, Bool, Dictionary, Value, ValueType, Array
 from .scope import Scope, Variable, WhenMutated
@@ -39,6 +40,32 @@ class Interpreter:
             error(span, f'{value.value} has been deleted')
 
         return value
+    
+    def cmp(self, lhs: Value[Any], op: TokenType, rhs: Value[Any]) -> Bool:
+        if op in (TokenType.Assign, TokenType.Eq): # I don't know what's the difference between = and ==
+            # Lowest precision comparasion
+            if lhs.type is not rhs.type:
+                rhs.value = type(lhs.value)(rhs.value) # A bit hacky but whatever
+
+            result = Bool(lhs.value == rhs.value)
+        elif op is TokenType.TripleEq:
+            if lhs.type is not rhs.type:
+                result = Bool.false
+            else:
+                result = Bool(lhs.value == rhs.value)
+        else:
+            if lhs.ref:
+                if not rhs.ref:
+                    result = Bool.false
+                else:
+                    result = Bool(lhs.ref is rhs.ref)
+            else:
+                if lhs.type is not rhs.type:
+                    result = Bool.false
+                else:
+                    result = Bool(lhs.value == rhs.value)
+
+        return result
 
     def visit(self, expr: ASTExpr) -> Value[Any]:
         # A bit cursed but whatever
@@ -213,32 +240,11 @@ class Interpreter:
                 return Value.undefined()
 
             result = lhs.value // rhs.value
-        elif expr.op in (TokenType.Assign, TokenType.Eq): # I don't know what's the difference between = and ==
-            # Lowest precision comparasion
-            if lhs.type is not rhs.type:
-                rhs.value = type(lhs.value)(rhs.value) # A bit hacky but whatever
-
-            result = Bool(lhs.value == rhs.value)
+        elif expr.op in EQ_TYPES:
+            result = self.cmp(lhs, expr.op, rhs)
             ty = ValueType.Bool
-        elif expr.op is TokenType.TripleEq:
-            if lhs.type is not rhs.type:
-                result = Bool.false
-            else:
-                result = Bool(lhs.value == rhs.value)
-            
-            ty = ValueType.Bool
-        elif expr.op is TokenType.QuadEq:
-            if lhs.ref:
-                if not rhs.ref:
-                    result = Bool.false
-                else:
-                    result = Bool(lhs.ref is rhs.ref)
-            else:
-                if lhs.type is not rhs.type:
-                    result = Bool.false
-                else:
-                    result = Bool(lhs.value == rhs.value)
-
+        elif expr.op in (TokenType.NAssign, TokenType.NEq, TokenType.NTripleEq, TokenType.NQuadEq):
+            result = Bool(not self.cmp(lhs, NEQ_TYPES_TO_EQ[expr.op], rhs).value)
             ty = ValueType.Bool
         else:
             raise RuntimeError(f'Unknown binary operator {expr.op!r}')
