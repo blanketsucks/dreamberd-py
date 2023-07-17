@@ -82,7 +82,7 @@ class Lexer:
         start = self.location
         value = ""
 
-        while self.current_char and self.current_char.isalnum():
+        while self.current_char and (self.current_char.isalnum() or self.current_char == '_'):
             value += self.current_char
             self.next()
 

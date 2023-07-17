@@ -7,7 +7,7 @@ from src.ast.parser import EQ_TYPES, NEQ_TYPES_TO_EQ
 
 from .value import SPECIAL_VALUES, Bool, Dictionary, Value, ValueType, Array
 from .scope import Scope, Variable, WhenMutated
-from .function import Function, ALL_BUILTINS
+from .function import Function, ALL_BUILTINS, Coroutine
 
 # TODO: The spec says that integers are just an array of digits so in theory it should be possible to have
 # ```
@@ -30,13 +30,10 @@ class Interpreter:
 
         self.deleted_values: Set[Value] = set()
 
-        self.pending: List[ASTExpr] = []
-        self.skip_current_newline = False
+        self.coroutines: List[Coroutine] = []
 
     def finalize(self) -> None:
-        # Evaluates any pending expressions
-        while self.pending:
-            self.visit(self.pending.pop(0))
+        self.execute_pending_coroutines()
 
     def is_deleted_value(self, value: Value) -> bool:
         for val in self.deleted_values:
@@ -76,21 +73,33 @@ class Interpreter:
                     result = Bool(lhs.value == rhs.value)
 
         return result
+    
+    def add_coroutine(self, coroutine: Coroutine) -> None:
+        self.coroutines.append(coroutine)
+
+    def execute_pending_coroutines(self) -> None:
+        for coroutine in self.coroutines.copy():
+            if coroutine.skip_current_newline:
+                coroutine.skip_current_newline = False
+                return
+
+            if coroutine.body:
+                pending = coroutine.body.pop(0)
+                if isinstance(pending, StringExpr):
+                    return
+                elif isinstance(pending, ReturnExpr):
+                    value = self.visit(pending.value)
+                    coroutine.set_result(value)
+
+                    coroutine.body = [] # Basically cancel the coroutine
+                    return
+
+                self.visit(pending)
 
     def visit(self, expr: ASTExpr) -> Value[Any]:
         # There is probably some bug lurking here
         if isinstance(expr, NewlineExpr):
-            if self.skip_current_newline:
-                self.skip_current_newline = False
-                return Value.undefined()
-
-            if self.pending:
-                pending = self.pending.pop(0)
-                if isinstance(pending, StringExpr):
-                    return Value.undefined()
-
-                self.visit(pending)
-
+            self.execute_pending_coroutines()
             return Value.undefined()
 
         method = getattr(self, f'visit_{expr.__class__.__name__}')
@@ -179,8 +188,17 @@ class Interpreter:
             return Value.undefined()
         
         value = self.visit(expr.value)
-        self.scope.variables[expr.name] = Variable(expr.name, value, expr.extras['boldness'], expr.type)
-            
+        coroutine: Optional[Coroutine] = None
+
+        if value.type is ValueType.Coroutine:
+            coroutine = value.value
+            value = value.value.result or Value.undefined()
+
+        variable = Variable(expr.name, value, expr.extras['boldness'], expr.type)
+        if coroutine:
+            coroutine.store = variable
+
+        self.scope.variables[expr.name] = variable
         return Value.undefined()
     
     def visit_IdentifierExpr(self, expr: IdentifierExpr) -> Value[Any]:

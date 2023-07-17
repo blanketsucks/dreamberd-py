@@ -26,6 +26,7 @@ class ValueType(IntEnum):
     Dict = auto()
     Object = auto()
     Function = auto()
+    Coroutine = auto()
 
 class ArrayType(IntEnum):
     String = auto()

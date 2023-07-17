@@ -27,3 +27,22 @@ count()!
 print(1)!
 print(3)!
 print(4)!
+
+==================
+
+print("===========")!
+
+async fun async_result() => {
+   print(2)!
+   noop!
+   
+   return 5!
+}
+
+const const result = async_result()!
+assert result == undefined!
+
+print("Waiting for result...")!
+print("Waiting for result...")!
+
+assert result == 5!

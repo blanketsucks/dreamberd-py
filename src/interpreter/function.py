@@ -1,15 +1,33 @@
 from __future__ import annotations
 
-from typing import NamedTuple, List, TYPE_CHECKING, Dict, Callable, Any
+from typing import NamedTuple, List, TYPE_CHECKING, Dict, Callable, Any, Optional
 import sys
 
 from src.ast import ASTExpr
 from .value import Value, ValueType, Bool, Array
 
 if TYPE_CHECKING:
+    from .scope import Variable
     from .interpreter import Interpreter
 
 ALL_BUILTINS: Dict[str, BuiltinFunction] = {}
+
+class Coroutine:
+    def __init__(self, body: List[ASTExpr]) -> None:
+        self.body = body
+        self.result: Optional[Value[Any]] = None
+        self.skip_current_newline: bool = True
+
+        self.store: Optional[Variable] = None
+
+    def set_result(self, result: Value[Any]) -> None:
+        if self.store:
+            self.store.value = result
+
+        self.result = result
+
+    def is_finished(self) -> bool:
+        return self.result is not None
 
 class Argument(NamedTuple):
     name: str
@@ -25,10 +43,10 @@ class Function(NamedTuple):
         from .scope import Scope, Variable, VariableType
 
         if self.is_async and not await_result:
-            interpreter.pending = self.body.copy()
-            interpreter.skip_current_newline = True
+            coroutine = Coroutine(self.body.copy())
+            interpreter.add_coroutine(coroutine)
 
-            return Value.undefined()
+            return Value(coroutine, ValueType.Coroutine)
 
         scope = Scope(interpreter, interpreter.scope)
         interpreter.scope = scope
