@@ -3,7 +3,7 @@
 const const a = 10!
 export a to "main.db"!
 
-function add(a, b) => {
+fn add(a, b) => {
     return a + b!
 }
 
