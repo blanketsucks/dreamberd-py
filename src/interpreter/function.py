@@ -20,6 +20,9 @@ class Coroutine:
 
         self.store: Optional[Variable] = None
 
+    def __repr__(self) -> str:
+        return f'<Coroutine result={self.result} skip_current_newline={self.skip_current_newline}>'
+
     def set_result(self, result: Value[Any]) -> None:
         if self.store:
             self.store.value = result

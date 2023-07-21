@@ -33,7 +33,8 @@ class Interpreter:
         self.coroutines: List[Coroutine] = []
 
     def finalize(self) -> None:
-        self.execute_pending_coroutines()
+        while self.coroutines:
+            self.execute_pending_coroutines()
 
     def is_deleted_value(self, value: Value) -> bool:
         for val in self.deleted_values:
@@ -81,23 +82,24 @@ class Interpreter:
         for coroutine in self.coroutines.copy():
             if coroutine.skip_current_newline:
                 coroutine.skip_current_newline = False
-                return
+                continue
 
             if coroutine.body:
                 pending = coroutine.body.pop(0)
                 if isinstance(pending, StringExpr):
-                    return
+                    continue
                 elif isinstance(pending, ReturnExpr):
                     value = self.visit(pending.value)
                     coroutine.set_result(value)
 
                     coroutine.body = [] # Basically cancel the coroutine
-                    return
+                    self.coroutines.remove(coroutine)
+
+                    continue
 
                 self.visit(pending)
 
     def visit(self, expr: ASTExpr) -> Value[Any]:
-        # There is probably some bug lurking here
         if isinstance(expr, NewlineExpr):
             self.execute_pending_coroutines()
             return Value.undefined()
@@ -111,7 +113,10 @@ class Interpreter:
 
         ast.reverse()
 
-        # TODO: Construct new interpreter or make new scope???
+        for coroutine in self.coroutines:
+            coroutine.body.reverse()
+
+        self.scope = Scope(self)
         for stmt in ast:
             self.visit(stmt)
 
@@ -386,7 +391,7 @@ class Interpreter:
             error(expr.span, 'Can only await function calls')
 
         call = cast(CallExpr, expr.expr)
-        callee = self.visit(call.callee)
+        callee: Value[Function] = self.visit(call.callee)
 
         if callee.type is not ValueType.Function:
             error(call.callee.span, 'Can only await function calls')
