@@ -20,7 +20,6 @@ class ValueType(IntEnum):
     Char = auto()
     Digit = auto()
     Bool = auto()
-    Null = auto()
     Undefined = auto()
     Array = auto()
     Dict = auto()
@@ -55,10 +54,6 @@ class Value(Generic[T]):
         value.ref = ref
 
         return value
-        
-    @classmethod
-    def null(cls) -> Value:
-        return Value(None, ValueType.Null) 
 
     @classmethod
     def undefined(cls) -> Value:
@@ -191,6 +186,5 @@ SPECIAL_VALUES = {
     "true": Value.true(),
     "false": Value.false(),
     "maybe": Value.maybe(),
-    "null": Value.null(),
     "undefined": Value.undefined()
 }

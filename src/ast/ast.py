@@ -30,6 +30,9 @@ __all__ = (
     'ReverseExpr',
     'NewlineExpr',
     'AwaitExpr',
+    'ClassExpr',
+    'NewExpr',
+    'AttributeExpr',
 )
 
 
@@ -260,3 +263,33 @@ class AwaitExpr(ASTExpr):
 
     def __repr__(self) -> str:
         return f'<AwaitExpr expr={self.expr!r}>'
+    
+class ClassExpr(ASTExpr):
+    def __init__(self, span: Span, name: str, body: List[ASTExpr]) -> None:
+        super().__init__(span)
+
+        self.name = name
+        self.body = body
+
+    def __repr__(self) -> str:
+        return f'<ClassExpr name={self.name!r}>'
+    
+class NewExpr(ASTExpr):
+    def __init__(self, span: Span, name: str, args: List[ASTExpr]) -> None:
+        super().__init__(span)
+
+        self.name = name
+        self.args = args
+
+    def __repr__(self) -> str:
+        return f'<NewExpr name={self.name!r}>'
+    
+class AttributeExpr(ASTExpr):
+    def __init__(self, span: Span, value: ASTExpr, attribute: str) -> None:
+        super().__init__(span)
+
+        self.value = value
+        self.attribute = attribute
+
+    def __repr__(self) -> str:
+        return f'<AttributeExpr value={self.value!r} attribute={self.attribute!r}>'

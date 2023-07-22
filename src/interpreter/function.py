@@ -4,7 +4,7 @@ from typing import NamedTuple, List, TYPE_CHECKING, Dict, Callable, Any, Optiona
 import sys
 
 from src.ast import ASTExpr
-from .value import Value, ValueType, Bool, Array
+from .value import Value, ValueType, Bool
 
 if TYPE_CHECKING:
     from .scope import Variable
@@ -42,7 +42,15 @@ class Function(NamedTuple):
     is_single_expr: bool
     is_async: bool
 
-    def call(self, args: List[Value[Any]], interpreter: Interpreter, await_result: bool = False) -> Value[Any]:
+    def __repr__(self) -> str:
+        return f'<Function name={self.name!r} args={self.args!r} is_async={self.is_async}>'
+
+    def call(
+        self,
+        args: List[Value[Any]], 
+        interpreter: Interpreter,
+        await_result: bool = False
+    ) -> Value[Any]:
         from .scope import Scope, Variable, VariableType
 
         if self.is_async and not await_result:
@@ -61,13 +69,13 @@ class Function(NamedTuple):
                 )
 
             if self.is_single_expr:
-                scope.return_value = interpreter.visit(self.body[0])
-            else:
-                for expr in self.body:
-                    interpreter.visit(expr)
+                return interpreter.visit(self.body[0])
 
-                    if scope.return_value:
-                        break
+            for expr in self.body:
+                interpreter.visit(expr)
+
+                if scope.return_value:
+                    break
 
         return scope.return_value or Value.undefined()
 
@@ -109,8 +117,6 @@ def format_value(value: Value[Any]) -> Any:
         fmt += '}'
     elif value.type is ValueType.Undefined:
         fmt = 'undefined'
-    elif value.type is ValueType.Null:
-        fmt = 'null'
     elif value.type is ValueType.Bool:
         if value.value is Bool.true:
             fmt = 'true'

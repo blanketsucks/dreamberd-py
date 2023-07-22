@@ -24,6 +24,8 @@ UNARY_OPS = (
 )
 
 class Parser:
+    id = 0
+
     def __init__(self, tokens: List[Token]) -> None:
         self.tokens = tokens
         self.index = -1
@@ -132,15 +134,18 @@ class Parser:
         expr.extras['boldness'] = boldness
         return expr
     
-    def parse_function_definition(self, is_async: bool) -> ASTExpr:
+    def parse_function_definition(self, is_async: bool, name: Optional[str] = None) -> ASTExpr:
         self.next(True)
 
-        if self.current.type is TokenType.Int:
-            name, span = self.current.value, self.current.span
-            self.next(True)
+        if not name:
+            if self.current.type is TokenType.Int:
+                name, span = self.current.value, self.current.span
+                self.next(True)
+            else:
+                token = self.expect(TokenType.Ident, 'identifier', True)
+                name, span = token.value, token.span
         else:
-            token = self.expect(TokenType.Ident, 'identifier', True)
-            name, span = token.value, token.span
+            span = self.current.span
 
         self.expect(TokenType.LParen, '(', True)
         args = []
@@ -220,8 +225,8 @@ class Parser:
         elif self.current.type is TokenType.QuintEq:
             span = self.current.span
 
-            while  self.current.type in EQ_TYPES:
-                self.next()
+            while self.current.type in EQ_TYPES:
+                self.next(True)
 
             filename: Optional[str] = None
             if self.current.type is TokenType.Ident:
@@ -316,6 +321,29 @@ class Parser:
                 error(self.current.span, 'Expected !')
 
             return StringExpr(span, 'noop')
+        elif self.current.type is TokenType.Class:
+            self.next(True)
+
+            token = self.expect(TokenType.Ident, 'identifier', True)
+            name, span = token.value, token.span
+
+            self.expect(TokenType.LBrace, '{', True)
+            body = []
+
+            while self.current.type is not TokenType.RBrace:
+                if self.current.type not in (TokenType.Var, TokenType.Const, TokenType.Class, TokenType.Function):
+                    error(self.current.span, 'Expected var, const, class or function')
+
+                body.append(self.statement())
+
+                if self.current.type is TokenType.RBrace:
+                    break
+
+                while self.current.type is TokenType.Whitespace:
+                    self.next()
+
+            self.next(True)
+            return ClassExpr(span, name, body)
 
         return self.expr()
     
@@ -430,8 +458,38 @@ class Parser:
         elif self.current.type is TokenType.Previous:
             self.next(True)
             expr = PreviousExpr(self.expr(False))
+        elif self.current.type is TokenType.New:
+            self.next(True)
+
+            token = self.expect(TokenType.Ident, 'identifier', True)
+            name, span = token.value, token.span
+
+            self.expect(TokenType.LParen, '(', True)
+            args = []
+
+            while self.current.type is not TokenType.RParen:
+                args.append(self.expr(False))
+
+                if self.current.type is TokenType.RParen:
+                    break
+
+                self.expect(TokenType.Comma, ',', True)
+
+            self.next(True)
+            expr = NewExpr(span, name, args)
+        elif self.current.type is TokenType.Function:
+            current_id = self.id
+            self.id += 1
+
+            expr = self.parse_function_definition(False, f'__anon_func_{current_id}')
         else:
             raise Exception(f'Unexpected token: {self.current!r} at index {self.index}')
+        
+        while self.current.type is TokenType.Dot:
+            self.next()
+            attribute = self.expect(TokenType.Ident, 'identifier', True).value
+
+            expr = AttributeExpr(expr.span, expr, attribute)
         
         if self.current.type is TokenType.LParen:
             self.next(True)
@@ -453,6 +511,12 @@ class Parser:
             self.expect(TokenType.RBracket, ']', True)
 
             expr = IndexExpr(expr.span, expr, index)
+
+        while self.current.type is TokenType.Dot:
+            self.next()
+            attribute = self.expect(TokenType.Ident, 'identifier', True).value
+
+            expr = AttributeExpr(expr.span, expr, attribute)
 
         return expr
         

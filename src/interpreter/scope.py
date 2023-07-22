@@ -26,6 +26,29 @@ class Variable:
 
         self.when_mutated: Optional[WhenMutated] = None
 
+class Class:
+    def __init__(self, name: str, scope: Scope) -> None:
+        self.name = name
+        self.scope = scope
+        self.has_instance = False
+
+class ClassInstance:
+    def __init__(self, cls: Class) -> None:
+        self.cls = cls
+
+    def getattr(self, name: str) -> Value[Any]:
+        from .value import Value, ValueType
+
+        attr = self.cls.scope.get_variable(name)
+        if attr:
+            return Value.with_ref(attr)
+        
+        attr = self.cls.scope.get_function(name)
+        if attr:
+            return Value(attr, ValueType.Function)
+        
+        return Value.undefined()
+
 class Scope:
     def __init__(self, interpreter: Interpreter, parent: Optional[Scope] = None):
         self._interpreter = interpreter
@@ -34,6 +57,7 @@ class Scope:
 
         self.variables: Dict[str, Variable] = {}
         self.functions: Dict[str, Function] = {}
+        self.classes: Dict[str, Class] = {}
 
         self.return_value: Optional[Value[Any]] = None
     
@@ -55,6 +79,15 @@ class Scope:
 
         if self.parent is not None:
             return self.parent.get_function(name)
+
+        return None
+    
+    def get_class(self, name: str) -> Optional[Class]:
+        if name in self.classes:
+            return self.classes[name]
+
+        if self.parent is not None:
+            return self.parent.get_class(name)
 
         return None
     

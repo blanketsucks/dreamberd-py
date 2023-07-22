@@ -6,3 +6,18 @@ when (health == 0) { // The example in the spec has `health = 0` but I have no i
 
 print("Changing health to 0")! // Should print first
 health = 0!
+
+====================
+
+class Player {
+   var const health = 100!
+}
+
+const const player = new Player()!
+
+when (player.health == 0) {
+   print("Player loses")!
+}
+
+print("Changing player health to 0")!
+player.health = 0!

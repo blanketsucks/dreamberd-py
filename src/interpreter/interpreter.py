@@ -6,7 +6,7 @@ from src.errors import error
 from src.ast.parser import EQ_TYPES, NEQ_TYPES_TO_EQ
 
 from .value import SPECIAL_VALUES, Bool, Dictionary, Value, ValueType, Array
-from .scope import Scope, Variable, WhenMutated
+from .scope import ClassInstance, Scope, Variable, WhenMutated, Class
 from .function import Function, ALL_BUILTINS, Coroutine
 
 # TODO: The spec says that integers are just an array of digits so in theory it should be possible to have
@@ -42,6 +42,10 @@ class Interpreter:
                 return True
             
         return False
+
+    def export_symbol(self, symbol: Any, name: str, to: str) -> None:
+        exports = self.exports.setdefault(to, {})
+        exports[name] = symbol
 
     def validate(self, span: Span, value: Value[Any]) -> Value[Any]:
         if self.is_deleted_value(value):
@@ -228,8 +232,10 @@ class Interpreter:
         is_single_expr = not isinstance(expr.body, list)
         body = expr.body if isinstance(expr.body, list) else [expr.body]
 
-        self.scope.functions[expr.name] = Function(expr.name, expr.args, body, is_single_expr, expr.is_async)
-        return Value.undefined()
+        function = Function(expr.name, expr.args, body, is_single_expr, expr.is_async)
+        self.scope.functions[expr.name] = function
+
+        return Value(function, ValueType.Function)
     
     def visit_ReturnExpr(self, expr: ReturnExpr) -> Value[Any]:
         value = self.visit(expr.value)
@@ -351,15 +357,21 @@ class Interpreter:
     
     def visit_ExportExpr(self, expr: ExportExpr) -> Value[Any]:
         symbol = self.scope.get_variable(expr.symbol)
-        if not symbol:
-            symbol = self.scope.get_function(expr.symbol)
-            if not symbol:
-                error(expr.span, 'Cannot export non-existent symbol')
+        if symbol:
+            self.export_symbol(symbol, expr.symbol, expr.to)
+            return Value.undefined()
+        
+        symbol = self.scope.get_function(expr.symbol)
+        if symbol:
+            self.export_symbol(symbol, expr.symbol, expr.to)
+            return Value.undefined()
+        
+        symbol = self.scope.get_class(expr.symbol)
+        if symbol:
+            self.export_symbol(symbol, expr.symbol, expr.to)
+            return Value.undefined()
 
-        exports = self.exports.setdefault(expr.to, {})
-        exports[expr.symbol] = symbol
-
-        return Value.undefined()
+        error(expr.span, 'Cannot export non-existent symbol')
     
     def visit_ImportExpr(self, expr: ImportExpr) -> Value[Any]:
         exports = self.exports.get(self.filename, {})
@@ -371,19 +383,19 @@ class Interpreter:
             self.scope.variables[export.name] = export
         elif isinstance(export, Function):
             self.scope.functions[export.name] = export
+        elif isinstance(export, Class):
+            self.scope.classes[export.name] = export
         
         return Value.undefined()
 
     def visit_WhenExpr(self, expr: WhenExpr) -> Value[Any]:
         cond = cast(BinaryOpExpr, expr.condition)
-        if not isinstance(cond.lhs, IdentifierExpr):
+        value = self.visit(cond.lhs)
+
+        if not value.ref:
             error(cond.lhs.span, 'When condition must be a variable')
 
-        variable = self.scope.get_variable(cond.lhs.name)
-        if not variable:
-            error(cond.lhs.span, 'When condition must be a variable')
-
-        variable.when_mutated = WhenMutated(cond, expr.body)
+        value.ref.when_mutated = WhenMutated(cond, expr.body)
         return Value.undefined()
 
     def visit_AwaitExpr(self, expr: AwaitExpr) -> Value[Any]:
@@ -400,3 +412,34 @@ class Interpreter:
             error(call.callee.span, 'Can only await async functions')
 
         return callee.value.call([self.visit(arg) for arg in call.args], self, await_result=True)
+    
+    def visit_ClassExpr(self, expr: ClassExpr) -> Value[Any]:
+        scope = Scope(self, self.scope)
+        with scope:
+            for stmt in expr.body:
+                self.visit(stmt)
+
+        self.scope.classes[expr.name] = Class(expr.name, scope)
+        return Value.undefined()
+    
+    def visit_NewExpr(self, expr: NewExpr) -> Value[Any]:
+        cls = self.scope.get_class(expr.name)
+        if not cls:
+            error(expr.span, 'Cannot instantiate non-existent class')
+
+        if cls.has_instance:
+            error(expr.span, f'Can\'t have more than one {cls.name!r} instance!')
+
+        instance = ClassInstance(cls)
+        cls.has_instance = True
+
+        # The spec says nothing about `self` or `this` so I don't know if i should add it or not
+        return Value(instance, ValueType.Object)
+    
+    def visit_AttributeExpr(self, expr: AttributeExpr) -> Value[Any]:
+        value: Value[ClassInstance] = self.visit(expr.value)
+        if value.type is not ValueType.Object:
+            error(expr.value.span, 'Cannot access attribute of non-object value')
+
+        instance = value.value
+        return instance.getattr(expr.attribute)

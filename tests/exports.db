@@ -9,6 +9,14 @@ fn add(a, b) => {
 
 export add to "main.db"!
 
+class Adder {
+    function add(a, b) => {
+        return a + b!
+    }
+}
+
+export Adder to "main.db"!
+
 ====== main.db =======
 
 import a!
@@ -16,3 +24,7 @@ print(a)!
 
 import add!
 print(add(1, 2))!
+
+import Adder!
+const const adder = new Adder()!
+print(adder.add(33, 36))!
